@@ -24,6 +24,7 @@ const examples = [
   { owner: 'bioc',                 pkg: 'scater' },
   { owner: 'r-lib',                pkg: 'commonmark' },
   { owner: 'r-multiverse-staging', pkg: 'polars' },
+  { owner: 'cran',                 pkg: 'MASS' },
 ];
 
 // Render each card sequentially so the timing logs are in order.

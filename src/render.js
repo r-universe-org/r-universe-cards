@@ -331,9 +331,13 @@ function inlineSvgScaled(svgText, w, h) {
   let s = svgText.replace(/<\?xml[^?]*\?>/g, '').replace(/<!DOCTYPE[^>]*>/gi, '').trim();
   s = namespaceIds(s);
   s = s.replace(/<svg\b([^>]*)>/i, (m, attrs) => {
+    // Strip any attribute we want to set ourselves; otherwise the source
+    // SVG's value plus our value would collide and resvg refuses to parse
+    // (cran's CRANlogo.svg, for example, ships its own preserveAspectRatio).
     let cleaned = attrs
       .replace(/\swidth="[^"]*"/gi, '')
-      .replace(/\sheight="[^"]*"/gi, '');
+      .replace(/\sheight="[^"]*"/gi, '')
+      .replace(/\spreserveAspectRatio="[^"]*"/gi, '');
     return `<svg${cleaned} width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet">`;
   });
   return s;
