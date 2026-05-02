@@ -1,0 +1,43 @@
+{
+  "name": "r-universe-cards",
+  "version": "0.1.0",
+  "description": "Generate social media preview cards for R-universe",
+  "main": "src/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src/",
+    "assets/"
+  ],
+  "scripts": {
+    "example": "node examples/render-examples.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "r-universe",
+    "social-card",
+    "open-graph",
+    "svg",
+    "png",
+    "preview"
+  ],
+  "author": "Jeroen Ooms",
+  "homepage": "https://github.com/r-universe-org/r-universe-cards",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/r-universe-org/r-universe-cards.git"
+  },
+  "bugs": {
+    "url": "https://github.com/r-universe-org/help/issues"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "http-errors": "^2.0.1"
+  }
+}

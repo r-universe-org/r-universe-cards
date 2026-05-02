@@ -1,0 +1,6 @@
+node_modules/
+*.log
+.DS_Store
+output/*
+!output/ggplot2.png
+!output/ggplot2.svg
