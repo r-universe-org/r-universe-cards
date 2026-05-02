@@ -19,6 +19,7 @@ const examples = [
   { owner: 'tidyverse',            pkg: 'ggplot2' },
   { owner: 'ropensci',             pkg: 'magick' },
   { owner: 'jeroen',               pkg: 'curl' },
+  { owner: 'jeroen',               pkg: 'V8' },
   { owner: 'eddelbuettel',         pkg: 'RProtoBuf' },
   { owner: 'bioc',                 pkg: 'scater' },
   { owner: 'r-lib',                pkg: 'commonmark' },

@@ -61,7 +61,9 @@ function rUniverseWordmark(color) {
         /font-family:\s*Arial,\s*Helvetica,\s*sans-serif/gi,
         `font-family: 'Inter', Helvetica, Arial, sans-serif`
       );
-      WORDMARK_INNER = raw;
+      // Namespace IDs so they don't collide with package-logo SVGs that also
+      // happen to use short ids like `a` or `b` (e.g. the V8 package logo).
+      WORDMARK_INNER = namespaceIds(raw);
     }
   }
   if (!WORDMARK_INNER) return '';
@@ -317,8 +319,17 @@ function logoPanel(logo) {
   return img;
 }
 
+// Counter used to generate a unique prefix per inlined SVG so internal
+// references (clip-path, gradients, masks, <use>) stay self-contained and
+// don't collide with IDs from other inlined SVGs in the same document.
+// Browsers scope IDs document-wide, so without prefixing, e.g. the V8 logo
+// and the r-universe wordmark — which both happen to use `id="a"` and
+// `id="b"` — would step on each other.
+let inlineCounter = 0;
+
 function inlineSvgScaled(svgText, w, h) {
   let s = svgText.replace(/<\?xml[^?]*\?>/g, '').replace(/<!DOCTYPE[^>]*>/gi, '').trim();
+  s = namespaceIds(s);
   s = s.replace(/<svg\b([^>]*)>/i, (m, attrs) => {
     let cleaned = attrs
       .replace(/\swidth="[^"]*"/gi, '')
@@ -326,6 +337,20 @@ function inlineSvgScaled(svgText, w, h) {
     return `<svg${cleaned} width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet">`;
   });
   return s;
+}
+
+/**
+ * Rewrite every `id="x"` to `id="<prefix>x"` and every reference to that id
+ * (`url(#x)`, `href="#x"`, `xlink:href="#x"`) to match. Returns a string
+ * with internally-consistent but globally-unique ids, safe to drop into a
+ * larger SVG document alongside other inlined fragments.
+ */
+function namespaceIds(svgText) {
+  const prefix = `i${++inlineCounter}-`;
+  return svgText
+    .replace(/\bid="([^"]+)"/g, (m, id) => `id="${prefix}${id}"`)
+    .replace(/url\(#([^)]+)\)/g, (m, id) => `url(#${prefix}${id})`)
+    .replace(/(xlink:)?href="#([^"]+)"/g, (m, xl, id) => `${xl || ''}href="#${prefix}${id}"`);
 }
 
 /* ------------------------------ space scenery ------------------------------ */
