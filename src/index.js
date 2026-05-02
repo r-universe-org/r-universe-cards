@@ -124,6 +124,9 @@ function resolveLogo(card, options) {
  * login-based URL if no UUID is available.
  */
 function ownerAvatarUrl(card) {
+  if (card.ownerLogin == 'cran') {
+    return 'https://cran.r-project.org/CRANlogo.svg';
+  }
   if (card.ownerUuid) {
     return `https://avatars.githubusercontent.com/u/${card.ownerUuid}?size=460`;
   }
