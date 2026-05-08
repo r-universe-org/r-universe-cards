@@ -97,6 +97,11 @@ function resolveLogo(card, options) {
   // Offline / opt-out path so the renderer can be exercised without network.
   if (options.fetchLogo === false) return Promise.resolve(null);
 
+  // Fix infinite recursion when logo is the card itself
+  if(card.logo && card.logo.match(".*r-universe.dev/.*/card\.*")) {
+    card.logo = null;
+  }
+
   const packageLogo = card.logo ? fetchLogo(card.logo) : Promise.resolve(null);
   return packageLogo.then((logo) => {
     if (logo) return logo;
