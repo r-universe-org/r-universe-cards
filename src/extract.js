@@ -40,7 +40,6 @@ export function extractCardData(raw) {
   const downloads = (raw._downloads && Number(raw._downloads.count)) || 0;
   const vignettes = Array.isArray(raw._vignettes) ? raw._vignettes.length : 0;
   const contributors = Array.isArray(raw._contributors) ? raw._contributors.length : 0;
-  const usedBy = Number(raw._usedby) || 0;
 
   return {
     package: pkg,
@@ -56,7 +55,6 @@ export function extractCardData(raw) {
     downloads,
     vignettes,
     contributors,
-    usedBy,
   };
 }
 

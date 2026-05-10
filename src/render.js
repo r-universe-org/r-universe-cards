@@ -9,24 +9,16 @@ const H = 630;
 
 const COLORS = {
   bg: '#ffffff',
-  bgPanel: '#f6f8fa',     // GitHub-ish soft gray for the logo panel
   rule: '#e4e8ee',
   ink: '#0f1f3a',         // deep navy headline
   inkSoft: '#3a4a66',     // body
   inkMuted: '#6b7a90',    // labels / metadata
   accent: '#3b71ca',      // primary link blue from r-universe.dev
-  accentInk: '#1f4a99',
-  accentSoft: '#eaf1fb',
   star: '#3b71ca',          // primary blue, matches the site link colour
-  rocket: '#0f1f3a',
-  flame: '#ff8a3d',         // warm accent for the rocket exhaust
-  flameSoft: '#ffd28a',
   ringSoft: '#dfe7f5',      // light blue dashed orbit lines
   badgeBg: '#3b71ca',       // solid accent blue, contrasts cleanly with sky
   badgeInk: '#ffffff',
   badgeMuted: '#6b88b8',    // for the "+N" overflow pill
-  // Saturn / r-universe icon colour
-  saturn: '#1f4a99',
 };
 
 // CSS that pulls Inter from Google Fonts when the SVG is opened in a
@@ -802,52 +794,6 @@ function cartoonAstronaut(cx, cy, scale = 1.5, rotate = -16) {
 }
 
 /**
- * A small stylised Earth — blue ocean disc with a couple of green continent
- * blobs and a thin orbit ring. Sized to fit where the package card's
- * generic backgroundPlanet sits, so the universe card has a recognisable
- * but not-the-same focal sphere.
- */
-function cartoonEarth(cx, cy, r) {
-  const ocean = '#5a99e7';
-  const land = '#3aa66a';
-  const cloud = '#ffffff';
-  return `
-    <g class="bg-earth" opacity="0.42">
-      <!-- subtle orbit ring -->
-      <ellipse cx="${cx}" cy="${cy}" rx="${r * 1.55}" ry="${r * 0.32}"
-               fill="none" stroke="${COLORS.accent}" stroke-width="1.2"
-               stroke-dasharray="3 6" opacity="0.35"
-               transform="rotate(-22 ${cx} ${cy})"/>
-      <!-- ocean -->
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${ocean}"/>
-      <!-- continents (a couple of irregular blobs) -->
-      <path d="M ${cx - 0.55 * r} ${cy - 0.2 * r}
-               q ${0.2 * r} ${-0.3 * r} ${0.45 * r} ${-0.1 * r}
-               q ${0.1 * r} ${0.18 * r} ${-0.05 * r} ${0.28 * r}
-               q ${-0.25 * r} ${0.15 * r} ${-0.4 * r} ${0.05 * r}
-               q ${-0.18 * r} ${-0.1 * r} ${-0.15 * r} ${-0.23 * r} z"
-            fill="${land}"/>
-      <path d="M ${cx + 0.05 * r} ${cy + 0.1 * r}
-               q ${0.18 * r} ${-0.15 * r} ${0.4 * r} ${-0.05 * r}
-               q ${0.12 * r} ${0.18 * r} ${-0.05 * r} ${0.32 * r}
-               q ${-0.2 * r} ${0.18 * r} ${-0.4 * r} ${0.05 * r}
-               q ${-0.08 * r} ${-0.18 * r} ${0.05 * r} ${-0.32 * r} z"
-            fill="${land}"/>
-      <!-- a small white cloud for character -->
-      <ellipse cx="${cx - 0.2 * r}" cy="${cy + 0.4 * r}" rx="${0.25 * r}" ry="${0.08 * r}"
-               fill="${cloud}" opacity="0.6"/>
-      <!-- thin outline -->
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
-              stroke="${COLORS.accent}" stroke-width="1" opacity="0.25"/>
-    </g>`;
-}
-
-/**
- * A small craters-and-glow moon, used as a tertiary accent on the universe
- * card so the right-hand side has a third element besides the astronaut
- * and the earth.
- */
-/**
  * A classic Saturn-with-rings — proper "ring goes behind, planet body
  * over it, then the front of the ring covers the lower half" stack so it
  * reads as a 3-D ringed body rather than a flat disc with a line through
@@ -886,18 +832,6 @@ function cartoonSaturn(cx, cy, r) {
             fill="none" stroke="${ringOuter}" stroke-width="${r * 0.18}" stroke-linecap="round"/>
       <path d="M ${cx - r * 1.55} ${cy} A ${r * 1.55} ${r * 0.34} 0 0 0 ${cx + r * 1.55} ${cy}"
             fill="none" stroke="${ringInner}" stroke-width="${r * 0.07}" stroke-linecap="round"/>
-    </g>`;
-}
-
-function cartoonMoon(cx, cy, r) {
-  const body = '#dde2ea';
-  const crater = '#b6bdc8';
-  return `
-    <g class="bg-moon" opacity="0.55">
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${body}" stroke="#0f1f3a" stroke-width="1.2"/>
-      <circle cx="${cx - r * 0.3}" cy="${cy - r * 0.2}" r="${r * 0.18}" fill="${crater}"/>
-      <circle cx="${cx + r * 0.4}" cy="${cy + r * 0.1}" r="${r * 0.12}" fill="${crater}"/>
-      <circle cx="${cx - r * 0.15}" cy="${cy + r * 0.4}" r="${r * 0.1}" fill="${crater}"/>
     </g>`;
 }
 
@@ -1218,13 +1152,6 @@ function pill(x, y, w, h, text) {
   `;
 }
 
-function pillSubtle(x, y, w, h, text) {
-  const fontSize = 18;
-  return `
-    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" ry="${h / 2}" fill="none" stroke="${COLORS.badgeMuted}" stroke-width="1.5"/>
-    <text x="${x + w / 2}" y="${y + h / 2 + 6}" text-anchor="middle" font-weight="600" font-size="${fontSize}" fill="${COLORS.badgeMuted}">${escapeXml(text)}</text>
-  `;
-}
 
 /* ---------------------------------- footer ---------------------------------- */
 
