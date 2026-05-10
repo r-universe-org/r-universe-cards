@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { generateSvg, svgToPng, extractCardData } from '../src/index.js';
+import { generatePackageSvg, generateUniverseSvg, svgToPng } from '../src/index.js';
+import { extractCardData } from '../src/extract.js'
+import { getUniverseData } from '../src/util.js'
 
 const outDir = path.join(import.meta.dirname, '..', 'output');
 fs.mkdirSync(outDir, { recursive: true });
@@ -27,10 +29,15 @@ const examples = [
   { owner: 'cran',                 pkg: 'MASS' },
 ];
 
-// Render each card sequentially so the timing logs are in order.
+// A few universes to render landing-page cards for.
+const universes = ['ropensci', 'tidyverse', 'jeroen', 'cran'];
+
+// Render package cards first, then universe cards. Sequentially, so the
+// timing log stays in order.
 examples
   .reduce((chain, ex) => chain.then(() => renderOne(ex)), Promise.resolve())
-  .then(() => console.log(`\nWrote ${examples.length} cards to ${outDir}`))
+  .then(() => universes.reduce((chain, login) => chain.then(() => renderUniverse(login)), Promise.resolve()))
+  .then(() => console.log(`\nWrote ${examples.length + universes.length} cards to ${outDir}`))
   .catch((err) => {
     console.error(err);
     process.exit(1);
@@ -46,7 +53,7 @@ function renderOne({ owner, pkg }) {
     .then((data) => {
       const card = extractCardData(data);
       const t0 = Date.now();
-      return generateSvg(data).then((svg) => {
+      return generatePackageSvg(data).then((svg) => {
         const png = svgToPng(svg);
         const ms = Date.now() - t0;
         fs.writeFileSync(path.join(outDir, `${pkg}.svg`), svg);
@@ -58,4 +65,16 @@ function renderOne({ owner, pkg }) {
         );
       });
     });
+}
+
+function renderUniverse(login) {
+  const t0 = Date.now();
+  return getUniverseData(login).then((data) => generateUniverseSvg(data)).then((svg) => {
+    const png = svgToPng(svg);
+    const ms = Date.now() - t0;
+    const file = `universe-${login}`;
+    fs.writeFileSync(path.join(outDir, `${file}.svg`), svg);
+    fs.writeFileSync(path.join(outDir, `${file}.png`), png);
+    console.log(`${file.padEnd(20)} ${ms}ms  (universe card)`);
+  });
 }

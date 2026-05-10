@@ -94,7 +94,7 @@ const TEXT_RIGHT = W - 64;
  *                        { isSvg:true, svg }  or  { isSvg:false, dataUri }.
  * @returns {string} A standalone SVG document.
  */
-export function renderSvg(card, logo) {
+export function renderPackageSvg(card, logo) {
   const hasLogo = !!logo;
   const textX = hasLogo ? TEXT_X_WITH_LOGO : TEXT_X_NO_LOGO;
   const textWidth = TEXT_RIGHT - textX;
@@ -225,6 +225,168 @@ text { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; }
 </defs>
 ${pieces.join('\n')}
 </svg>`;
+}
+
+/**
+ * Build the SVG card for a whole r-universe (per org/user landing page),
+ * not a single package. Reuses the same chrome (background scenery, header
+ * brand mark, bottom-right stats row) but the body shows the universe's
+ * display name + bio + a few summary counters.
+ *
+ * @param {object} uni   Output of extractUniverseData().
+ * @param {object} [logo] Already-fetched logo descriptor; same shape as
+ *                        used by renderPackageSvg.
+ * @returns {string} A standalone SVG document.
+ */
+export function renderUniverseSvg(uni, logo) {
+  const hasLogo = !!logo;
+  const textX = hasLogo ? TEXT_X_WITH_LOGO : TEXT_X_NO_LOGO;
+  const textWidth = TEXT_RIGHT - textX;
+
+  // Headline: the display name (e.g. "rOpenSci"), auto-shrinks if very wide.
+  const name = uni.name || uni.ownerLogin || '';
+  const nameSize = fitSingleLine(name, textWidth, 88, 48, 700);
+
+  // Bio wraps to up to 2 italic lines.
+  const bioSize = 28;
+  const bioLineHeight = 36;
+  const bioLines = wrapText(uni.description || '', textWidth, bioSize, 400, 2);
+
+  // Universe URL goes under the bio (the footer-left slot is freed up so
+  // the labelled stats can spread across the whole footer width).
+  const url = `https://${uni.ownerLogin}.r-universe.dev`;
+
+  // Top topics (the right-side tag row).
+  const tagsBlock = topRightTags(uni.tags);
+
+  /* y-axis assembly */
+  // Slight nudge up vs the package card so the name + bio + URL block has
+  // a touch more breathing room before the footer row.
+  let y = 170;
+  const nameBaseline = y + nameSize * 0.82;
+  y = nameBaseline + nameSize * 0.28 + 10;
+  const bioBlockY = y;
+  // The URL sits a comfortable line-height below the bio block.
+  const urlY = bioBlockY + bioLines.length * bioLineHeight + 32;
+
+  const pieces = [];
+  pieces.push(`<rect width="${W}" height="${H}" fill="${COLORS.bg}"/>`);
+  pieces.push(spaceSceneryUniverse());
+  if (hasLogo) pieces.push(logoHalo());
+  pieces.push(headerStrip());
+  pieces.push(tagsBlock);
+  pieces.push(`<line x1="64" y1="${FOOTER_TOP}" x2="${W - 64}" y2="${FOOTER_TOP}" stroke="${COLORS.rule}" stroke-width="1"/>`);
+  if (hasLogo) pieces.push(logoPanel(logo));
+
+  // Display name (same colour as a package name).
+  pieces.push(
+    `<text x="${textX}" y="${nameBaseline}" font-weight="700" font-size="${nameSize}" fill="#424242" letter-spacing="-2">${escapeXml(name)}</text>`
+  );
+
+  // Bio (italic, with white halo for legibility over scenery).
+  bioLines.forEach((line, i) => {
+    const ly = bioBlockY + (i + 1) * bioLineHeight - 8;
+    pieces.push(
+      `<text x="${textX}" y="${ly}" font-weight="400" font-style="italic" font-size="${bioSize}" fill="${COLORS.inkSoft}" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" paint-order="stroke fill">${escapeXml(line)}</text>`
+    );
+  });
+
+  // Universe URL line under the bio. No icon; the footer no longer has
+  // the URL slot so this is the canonical link.
+  pieces.push(
+    `<text x="${textX}" y="${urlY}" font-weight="600" font-size="22" fill="${COLORS.inkSoft}" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke fill">${escapeXml(url)}</text>`
+  );
+
+  // Footer: labelled stats only — no URL on the left any more.
+  pieces.push(footerUniverseStats(uni));
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<defs>
+<style type="text/css"><![CDATA[
+${GOOGLE_FONTS_IMPORT}
+text { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; }
+]]></style>
+<radialGradient id="bgWashRadial" cx="78%" cy="22%" r="80%">
+  <stop offset="0%" stop-color="#d8e5f7"/>
+  <stop offset="35%" stop-color="#e6eef9" stop-opacity="0.8"/>
+  <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="bgWashLow" cx="20%" cy="100%" r="60%">
+  <stop offset="0%" stop-color="#eaf1fb" stop-opacity="0.55"/>
+  <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="starGlow" cx="50%" cy="50%" r="50%">
+  <stop offset="0%" stop-color="#7aa6e8" stop-opacity="0.55"/>
+  <stop offset="60%" stop-color="#3b71ca" stop-opacity="0.18"/>
+  <stop offset="100%" stop-color="#3b71ca" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="planetSoft" cx="35%" cy="32%" r="80%">
+  <stop offset="0%" stop-color="#bcd0ec" stop-opacity="0.55"/>
+  <stop offset="80%" stop-color="#7aa6e8" stop-opacity="0.20"/>
+  <stop offset="100%" stop-color="#3b71ca" stop-opacity="0.10"/>
+</radialGradient>
+<clipPath id="userAvatarClip">
+  <circle cx="${LOGO_PANEL.x + LOGO_PANEL.size / 2}" cy="${LOGO_PANEL.y + LOGO_PANEL.size / 2}" r="${LOGO_PANEL.size / 2}"/>
+</clipPath>
+</defs>
+${pieces.join('\n')}
+</svg>`;
+}
+
+/**
+ * Stats row for the universe card: packages · contributors · maintainers
+ * · articles · datasets. Same right-to-left layout and visual style as
+ * the package card's footerStats — just different items.
+ */
+function footerUniverseStats(uni) {
+  const pluralise = (n, single) =>
+    `${formatNumber(n)} ${n === 1 ? single : single + 's'}`;
+
+  const items = [];
+  if (uni.packages) items.push({ kind: 'packages', value: pluralise(uni.packages, 'package') });
+  // For user-type universes (circle avatar) the "maintainers" count is
+  // always 1 — uninteresting. Replace it with the number of organisations
+  // the user is involved with, which the /api/summary endpoint also
+  // exposes. For org-type universes we keep showing maintainers as before.
+  if (uni.ownerIsOrg) {
+    if (uni.maintainers) items.push({ kind: 'maintainers', value: pluralise(uni.maintainers, 'maintainer') });
+  } else if (uni.organizations) {
+    items.push({ kind: 'organizations', value: pluralise(uni.organizations, 'organization') });
+  }
+  if (uni.contributors) items.push({ kind: 'contributors', value: pluralise(uni.contributors, 'contributor') });
+  if (uni.articles)     items.push({ kind: 'articles',     value: pluralise(uni.articles,     'article') });
+  if (uni.datasets)     items.push({ kind: 'datasets',     value: pluralise(uni.datasets,     'dataset') });
+  if (!items.length) return '';
+
+  const y = FOOTER_Y;
+  const fontSize = FOOTER_FONT_SIZE;
+  const iconSize = FOOTER_ICON_SIZE;
+  const gapInside = 9;
+  const gapBetween = 24;
+
+  // The footer URL is gone, so the row spans the full inner width and is
+  // distributed evenly. Compute total content width first, then deal it
+  // out left-to-right with even gaps.
+  const widths = items.map((it) =>
+    Math.ceil(measureText(it.value, fontSize, 600)) + gapInside + iconSize,
+  );
+  const total = widths.reduce((a, b) => a + b, 0);
+  const inner = W - 128; // 64 px margin each side
+  const gap = items.length > 1 ? Math.max(gapBetween, (inner - total) / (items.length - 1)) : gapBetween;
+
+  const pieces = [];
+  let cursor = 64;
+  items.forEach((it, i) => {
+    pieces.push(statIcon(it.kind, cursor, y - iconSize / 2, iconSize));
+    cursor += iconSize + gapInside;
+    pieces.push(
+      `<text x="${cursor}" y="${y + 7}" font-weight="600" font-size="${fontSize}" fill="${COLORS.ink}">${escapeXml(it.value)}</text>`
+    );
+    cursor += Math.ceil(measureText(it.value, fontSize, 600));
+    if (i < items.length - 1) cursor += gap;
+  });
+  return `<g class="universe-stats">${pieces.join('')}</g>`;
 }
 
 /* ----------------------------- piece builders ---------------------------- */
@@ -416,6 +578,46 @@ function spaceScenery() {
 }
 
 /**
+ * Background scenery for the universe card. Same cartoon-faded style as
+ * spaceScenery() — same wash, same starfield — but the focal cast is
+ * different so a universe card doesn't look like a package card by
+ * accident. The rocket is replaced by an astronaut, the saturn-y planet
+ * by an Earth, and the satellite by a small space station.
+ */
+function spaceSceneryUniverse() {
+  const washUpper = `<rect x="0" y="0" width="${W}" height="${H}" fill="url(#bgWashRadial)"/>`;
+  const washLower = `<rect x="0" y="0" width="${W}" height="${H}" fill="url(#bgWashLow)"/>`;
+
+  // Saturn at the top with a tilted ring, anchored upper-right. Kept small
+  // so it reads as a distant body rather than competing with the astronaut.
+  const saturn = cartoonSaturn(W - 120, 130, 40);
+
+  // A subtle dashed orbit arc that the astronaut appears to be tethered to.
+  const arcs = `
+    <path d="M 380 500 Q 760 200 ${W + 30} 110"
+          fill="none" stroke="${COLORS.ringSoft}" stroke-width="1.5"
+          stroke-dasharray="2 6" opacity="0.85"/>
+  `;
+
+  // The astronaut is the main figure on the right, in a more dynamic
+  // floating pose (one arm raised, body tilted).
+  const astronaut = cartoonAstronaut(W - 240, 330, 1.95, -14);
+
+  // A little background rocket pointing right, tucked into the empty space
+  // between the wordmark and the astronaut so it doesn't overlap the title.
+  const rocket = rocketGroup(540, 130, 0.65, 92);
+
+  // Lower-mid: a cartoon flying saucer with a cute green alien (round head,
+  // two antennae). Moved up-right so it clears the footer text, and faded
+  // a bit more than before so it stays scenery rather than a focal point.
+  const alien = alienUFO(540, 470, 2.4, -8);
+
+  const stars = starsField();
+
+  return `<g class="scenery">${washUpper}${washLower}${saturn}${arcs}${rocket}${astronaut}${alien}${stars}</g>`;
+}
+
+/**
  * Tiny cartoon UFO. Native size ~50 wide × 24 tall, centred at (0, 0).
  * Saucer body in light gray, blue dome, red rim band, three glowing lights
  * underneath. Same outline weight as the rocket so they read as a set.
@@ -512,6 +714,277 @@ function backgroundPlanet(cx, cy, r) {
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#planetSoft)"/>
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
               stroke="${COLORS.accent}" stroke-width="1" opacity="0.18"/>
+    </g>`;
+}
+
+/**
+ * A cartoon astronaut in a dynamic floating pose — body tilted, one arm
+ * raised giving a thumbs-up, legs slightly splayed. Same line-and-fill
+ * style as the rest of the cartoon scenery. The whole figure is wrapped
+ * in a -16° rotation by default to read as "drifting in zero-G" rather
+ * than standing still; pass `rotate` to override.
+ */
+function cartoonAstronaut(cx, cy, scale = 1.5, rotate = -16) {
+  const C = {
+    suit: '#ffffff',
+    pack: '#cfd5dd',
+    line: '#0f1f3a',
+    visor: '#1f4a99',
+    visorGlass: '#5a8fd8',
+    visorHi: '#ffffff',
+    accent: '#e74c4c',
+    blink: '#ffd28a',
+    boot: '#0f1f3a',
+    glove: '#dde2ea',
+    tether: '#9aa3b1',
+  };
+  return `
+    <g class="bg-astronaut" opacity="0.22"
+       transform="translate(${cx},${cy}) rotate(${rotate}) scale(${scale})">
+      <!-- tether attached to the astronaut's right side, curving out and
+           continuing well past the figure so it appears to lead off-canvas
+           to something we can't see (mothership, station, etc.). -->
+      <path d="M 22 14 C 56 4 96 22 150 56" fill="none"
+            stroke="${C.tether}" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+      <!-- backpack (slightly visible behind the torso) -->
+      <rect x="-26" y="-2" width="52" height="46" rx="6"
+            fill="${C.pack}" stroke="${C.line}" stroke-width="1.5"/>
+      <rect x="-18" y="6" width="6" height="3" fill="${C.accent}"/>
+      <rect x="12" y="6" width="6" height="3" fill="${C.visor}"/>
+      <!-- left arm: bent across the chest -->
+      <path d="M -24 6 Q -42 14 -46 32 Q -42 40 -34 40 Q -24 38 -22 30 L -22 12 Z"
+            fill="${C.suit}" stroke="${C.line}" stroke-width="1.6" stroke-linejoin="round"/>
+      <!-- left glove (cuff + fist) -->
+      <circle cx="-37" cy="36" r="6" fill="${C.glove}" stroke="${C.line}" stroke-width="1.4"/>
+      <!-- right arm: raised up giving a thumbs-up -->
+      <path d="M 22 4 Q 38 -10 46 -34 Q 50 -42 44 -46 Q 36 -48 30 -42 L 22 -8 Z"
+            fill="${C.suit}" stroke="${C.line}" stroke-width="1.6" stroke-linejoin="round"/>
+      <!-- right glove + thumb -->
+      <circle cx="42" cy="-44" r="7" fill="${C.glove}" stroke="${C.line}" stroke-width="1.4"/>
+      <path d="M 47 -52 Q 51 -55 49 -49 Q 47 -46 45 -47 Z"
+            fill="${C.glove}" stroke="${C.line}" stroke-width="1.2"/>
+      <!-- suit body / torso (slight curve, narrows at waist) -->
+      <path d="M -22 -2 Q -26 28 -18 50 H 18 Q 26 28 22 -2 Z"
+            fill="${C.suit}" stroke="${C.line}" stroke-width="1.7" stroke-linejoin="round"/>
+      <!-- chest control panel -->
+      <rect x="-12" y="10" width="24" height="12" rx="2"
+            fill="${C.line}" opacity="0.55"/>
+      <circle cx="-6" cy="16" r="1.8" fill="${C.accent}"/>
+      <circle cx="0" cy="16" r="1.8" fill="${C.blink}"/>
+      <circle cx="6" cy="16" r="1.8" fill="${C.visorGlass}"/>
+      <!-- belt -->
+      <rect x="-19" y="44" width="38" height="6" fill="${C.line}" opacity="0.55"/>
+      <!-- left leg: bent slightly outward -->
+      <path d="M -16 50 Q -22 70 -28 90 Q -22 96 -14 92 Q -8 76 -6 50 Z"
+            fill="${C.suit}" stroke="${C.line}" stroke-width="1.6" stroke-linejoin="round"/>
+      <!-- right leg: kicked out to the side -->
+      <path d="M 6 50 Q 14 72 24 88 Q 30 90 32 84 Q 22 60 16 50 Z"
+            fill="${C.suit}" stroke="${C.line}" stroke-width="1.6" stroke-linejoin="round"/>
+      <!-- boots -->
+      <ellipse cx="-22" cy="92" rx="9" ry="4" fill="${C.boot}"/>
+      <ellipse cx="28" cy="86" rx="8" ry="4" fill="${C.boot}" transform="rotate(20 28 86)"/>
+      <!-- helmet -->
+      <circle cx="0" cy="-26" r="26" fill="${C.suit}" stroke="${C.line}" stroke-width="1.8"/>
+      <!-- visor outer ring -->
+      <ellipse cx="0" cy="-26" rx="19" ry="15" fill="${C.visor}"/>
+      <!-- visor glass -->
+      <ellipse cx="0" cy="-27" rx="16" ry="12.5" fill="${C.visorGlass}"/>
+      <!-- visor highlight -->
+      <ellipse cx="-6" cy="-32" rx="6" ry="3.2" fill="${C.visorHi}" opacity="0.9"/>
+      <ellipse cx="8" cy="-22" rx="2" ry="1.2" fill="${C.visorHi}" opacity="0.55"/>
+      <!-- helmet antenna with red blinker -->
+      <line x1="-6" y1="-50" x2="-10" y2="-58" stroke="${C.line}"
+            stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="-11" cy="-59" r="2.2" fill="${C.accent}" stroke="${C.line}" stroke-width="0.8"/>
+      <!-- shoulder blinker -->
+      <circle cx="-22" cy="2" r="1.7" fill="${C.blink}" opacity="0.95"/>
+    </g>`;
+}
+
+/**
+ * A small stylised Earth — blue ocean disc with a couple of green continent
+ * blobs and a thin orbit ring. Sized to fit where the package card's
+ * generic backgroundPlanet sits, so the universe card has a recognisable
+ * but not-the-same focal sphere.
+ */
+function cartoonEarth(cx, cy, r) {
+  const ocean = '#5a99e7';
+  const land = '#3aa66a';
+  const cloud = '#ffffff';
+  return `
+    <g class="bg-earth" opacity="0.42">
+      <!-- subtle orbit ring -->
+      <ellipse cx="${cx}" cy="${cy}" rx="${r * 1.55}" ry="${r * 0.32}"
+               fill="none" stroke="${COLORS.accent}" stroke-width="1.2"
+               stroke-dasharray="3 6" opacity="0.35"
+               transform="rotate(-22 ${cx} ${cy})"/>
+      <!-- ocean -->
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${ocean}"/>
+      <!-- continents (a couple of irregular blobs) -->
+      <path d="M ${cx - 0.55 * r} ${cy - 0.2 * r}
+               q ${0.2 * r} ${-0.3 * r} ${0.45 * r} ${-0.1 * r}
+               q ${0.1 * r} ${0.18 * r} ${-0.05 * r} ${0.28 * r}
+               q ${-0.25 * r} ${0.15 * r} ${-0.4 * r} ${0.05 * r}
+               q ${-0.18 * r} ${-0.1 * r} ${-0.15 * r} ${-0.23 * r} z"
+            fill="${land}"/>
+      <path d="M ${cx + 0.05 * r} ${cy + 0.1 * r}
+               q ${0.18 * r} ${-0.15 * r} ${0.4 * r} ${-0.05 * r}
+               q ${0.12 * r} ${0.18 * r} ${-0.05 * r} ${0.32 * r}
+               q ${-0.2 * r} ${0.18 * r} ${-0.4 * r} ${0.05 * r}
+               q ${-0.08 * r} ${-0.18 * r} ${0.05 * r} ${-0.32 * r} z"
+            fill="${land}"/>
+      <!-- a small white cloud for character -->
+      <ellipse cx="${cx - 0.2 * r}" cy="${cy + 0.4 * r}" rx="${0.25 * r}" ry="${0.08 * r}"
+               fill="${cloud}" opacity="0.6"/>
+      <!-- thin outline -->
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+              stroke="${COLORS.accent}" stroke-width="1" opacity="0.25"/>
+    </g>`;
+}
+
+/**
+ * A small craters-and-glow moon, used as a tertiary accent on the universe
+ * card so the right-hand side has a third element besides the astronaut
+ * and the earth.
+ */
+/**
+ * A classic Saturn-with-rings — proper "ring goes behind, planet body
+ * over it, then the front of the ring covers the lower half" stack so it
+ * reads as a 3-D ringed body rather than a flat disc with a line through
+ * it. Used as the upper-area focal piece on the universe card.
+ */
+function cartoonSaturn(cx, cy, r) {
+  const body = '#e8a55a';
+  const bodyDark = '#b97633';
+  const band = '#d68a3c';
+  const ringOuter = '#cba26c';
+  const ringInner = '#f0d49b';
+  const line = '#0f1f3a';
+  const tilt = -22;
+  return `
+    <g class="bg-saturn" opacity="0.32"
+       transform="rotate(${tilt} ${cx} ${cy})">
+      <!-- back half of the ring (the part that goes behind the planet) -->
+      <path d="M ${cx - r * 1.85} ${cy} A ${r * 1.85} ${r * 0.42} 0 0 1 ${cx + r * 1.85} ${cy}"
+            fill="none" stroke="${ringOuter}" stroke-width="${r * 0.18}" stroke-linecap="round"/>
+      <path d="M ${cx - r * 1.55} ${cy} A ${r * 1.55} ${r * 0.34} 0 0 1 ${cx + r * 1.55} ${cy}"
+            fill="none" stroke="${ringInner}" stroke-width="${r * 0.07}" stroke-linecap="round"/>
+      <!-- planet body -->
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${body}" stroke="${line}" stroke-width="1.6"/>
+      <!-- darker bands across the planet for the gas-giant look -->
+      <ellipse cx="${cx}" cy="${cy - r * 0.25}" rx="${r * 0.95}" ry="${r * 0.08}"
+               fill="${band}" opacity="0.55"/>
+      <ellipse cx="${cx}" cy="${cy + r * 0.05}" rx="${r * 0.99}" ry="${r * 0.07}"
+               fill="${bodyDark}" opacity="0.45"/>
+      <ellipse cx="${cx}" cy="${cy + r * 0.4}" rx="${r * 0.85}" ry="${r * 0.06}"
+               fill="${band}" opacity="0.5"/>
+      <!-- subtle highlight on upper-left -->
+      <ellipse cx="${cx - r * 0.35}" cy="${cy - r * 0.45}" rx="${r * 0.25}" ry="${r * 0.12}"
+               fill="#ffffff" opacity="0.25"/>
+      <!-- front half of the ring (covers the lower portion of the planet) -->
+      <path d="M ${cx - r * 1.85} ${cy} A ${r * 1.85} ${r * 0.42} 0 0 0 ${cx + r * 1.85} ${cy}"
+            fill="none" stroke="${ringOuter}" stroke-width="${r * 0.18}" stroke-linecap="round"/>
+      <path d="M ${cx - r * 1.55} ${cy} A ${r * 1.55} ${r * 0.34} 0 0 0 ${cx + r * 1.55} ${cy}"
+            fill="none" stroke="${ringInner}" stroke-width="${r * 0.07}" stroke-linecap="round"/>
+    </g>`;
+}
+
+function cartoonMoon(cx, cy, r) {
+  const body = '#dde2ea';
+  const crater = '#b6bdc8';
+  return `
+    <g class="bg-moon" opacity="0.55">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${body}" stroke="#0f1f3a" stroke-width="1.2"/>
+      <circle cx="${cx - r * 0.3}" cy="${cy - r * 0.2}" r="${r * 0.18}" fill="${crater}"/>
+      <circle cx="${cx + r * 0.4}" cy="${cy + r * 0.1}" r="${r * 0.12}" fill="${crater}"/>
+      <circle cx="${cx - r * 0.15}" cy="${cy + r * 0.4}" r="${r * 0.1}" fill="${crater}"/>
+    </g>`;
+}
+
+/**
+ * Cartoon flying saucer with a friendly green alien at the controls. The
+ * alien is a round head with two antennae (each a thin stalk + small ball),
+ * round button eyes and a small smile — the classic kids'-book look rather
+ * than the bulbous big-head Roswell stereotype. Native footprint ~140 × 90
+ * (centred at 0, 0).
+ */
+function alienUFO(cx, cy, scale = 1, rotate = 0) {
+  const C = {
+    saucer: '#c5ccd6',
+    line: '#0f1f3a',
+    dome: '#7aa6e8',
+    domeHi: '#ffffff',
+    rim: '#e74c4c',
+    light: '#ffd28a',
+    head: '#7ec850',
+    headShade: '#4f9a30',
+    headHi: '#bfe890',
+    eye: '#ffffff',
+    pupil: '#0f1f3a',
+    grin: '#0f1f3a',
+    cheek: '#ff8a8a',
+    beam: '#fff6d8',
+  };
+  return `
+    <g class="bg-alien-ufo" opacity="0.30"
+       transform="translate(${cx},${cy}) rotate(${rotate}) scale(${scale})">
+      <!-- soft tractor-beam cone underneath -->
+      <path d="M -26 16 L -54 44 L 54 44 L 26 16 Z"
+            fill="${C.beam}" opacity="0.5"/>
+      <!-- saucer body (oval) -->
+      <ellipse cx="0" cy="10" rx="62" ry="12"
+               fill="${C.saucer}" stroke="${C.line}" stroke-width="1.7"/>
+      <!-- red rim band underneath -->
+      <path d="M -54 16 Q 0 28 54 16 L 44 22 Q 0 30 -44 22 Z"
+            fill="${C.rim}" stroke="${C.line}" stroke-width="1.4" stroke-linejoin="round"/>
+      <!-- glass dome on top -->
+      <path d="M -30 8 A 30 28 0 0 1 30 8 Z"
+            fill="${C.dome}" stroke="${C.line}" stroke-width="1.7" stroke-linejoin="round"/>
+      <!-- dome highlight -->
+      <path d="M -22 2 Q -16 -14 -2 -20" fill="none"
+            stroke="${C.domeHi}" stroke-width="2.2" stroke-linecap="round" opacity="0.9"/>
+
+      <!-- alien antennae (two stalks with small balls) -->
+      <line x1="-7" y1="-12" x2="-12" y2="-22"
+            stroke="${C.line}" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="-12" cy="-23.5" r="2.4" fill="${C.head}" stroke="${C.line}" stroke-width="1"/>
+      <line x1="7" y1="-12" x2="12" y2="-22"
+            stroke="${C.line}" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="12" cy="-23.5" r="2.4" fill="${C.head}" stroke="${C.line}" stroke-width="1"/>
+
+      <!-- alien round head -->
+      <circle cx="0" cy="-2" r="14"
+              fill="${C.head}" stroke="${C.line}" stroke-width="1.7"/>
+      <!-- subtle head shading on lower-right -->
+      <path d="M 4 -10 A 14 14 0 0 1 -2 12 Q 14 8 14 -2 Q 14 -8 10 -12 Z"
+            fill="${C.headShade}" opacity="0.45"/>
+      <!-- head highlight upper-left -->
+      <ellipse cx="-6" cy="-10" rx="4" ry="2" fill="${C.headHi}" opacity="0.7"/>
+
+      <!-- round button eyes -->
+      <circle cx="-5" cy="-3" r="3.2" fill="${C.eye}" stroke="${C.line}" stroke-width="1"/>
+      <circle cx="5" cy="-3" r="3.2" fill="${C.eye}" stroke="${C.line}" stroke-width="1"/>
+      <circle cx="-5" cy="-2" r="1.6" fill="${C.pupil}"/>
+      <circle cx="5" cy="-2" r="1.6" fill="${C.pupil}"/>
+
+      <!-- small grin and cheek dots -->
+      <path d="M -4 5 Q 0 9 4 5" fill="none"
+            stroke="${C.grin}" stroke-width="1.4" stroke-linecap="round"/>
+      <circle cx="-9" cy="3" r="1.4" fill="${C.cheek}" opacity="0.8"/>
+      <circle cx="9" cy="3" r="1.4" fill="${C.cheek}" opacity="0.8"/>
+
+      <!-- arms reaching to the dome rim -->
+      <path d="M -12 8 Q -22 12 -28 10" fill="none"
+            stroke="${C.head}" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M 12 8 Q 22 12 28 10" fill="none"
+            stroke="${C.head}" stroke-width="3.2" stroke-linecap="round"/>
+
+      <!-- under-saucer lights -->
+      <circle cx="-40" cy="22" r="2.4" fill="${C.light}"/>
+      <circle cx="-20" cy="24" r="2.6" fill="${C.light}"/>
+      <circle cx="0" cy="25" r="2.8" fill="${C.light}"/>
+      <circle cx="20" cy="24" r="2.6" fill="${C.light}"/>
+      <circle cx="40" cy="22" r="2.4" fill="${C.light}"/>
     </g>`;
 }
 
@@ -828,6 +1301,21 @@ function statIcon(kind, x, y, size = 18, color = COLORS.accent) {
     case 'globe':
       // globe / website
       return `<g transform="${transform}" stroke="${c}" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="8"/><ellipse cx="9" cy="9" rx="3.6" ry="8"/><line x1="1" y1="9" x2="17" y2="9"/></g>`;
+    case 'packages':
+      // stacked boxes
+      return `<g transform="${transform}" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6 L 9 2 L 16 6 L 9 10 Z"/><path d="M2 6 V 13 L 9 17"/><path d="M16 6 V 13 L 9 17"/><path d="M9 10 V 17"/></g>`;
+    case 'articles':
+      // book / article (alias of vignettes — different name, same shape)
+      return `<g transform="${transform}" stroke="${c}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 1 H 12 L 16 5 V 17 H 3 Z"/><path d="M12 1 V 5 H 16"/><path d="M6 9 H 13"/><path d="M6 13 H 11"/></g>`;
+    case 'datasets':
+      // database cylinder
+      return `<g transform="${transform}" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="9" cy="3.2" rx="6.5" ry="2.2"/><path d="M2.5 3.2 V 9 a 6.5 2.2 0 0 0 13 0 V 3.2"/><path d="M2.5 9 V 14.8 a 6.5 2.2 0 0 0 13 0 V 9"/></g>`;
+    case 'maintainers':
+      // single-person silhouette
+      return `<g transform="${transform}" fill="${c}"><circle cx="9" cy="6" r="3.2"/><path d="M2 17 C 2.5 12 5.5 11 9 11 C 12.5 11 15.5 12 16 17 Z"/></g>`;
+    case 'organizations':
+      // office building: outline, two rows of windows, a small door
+      return `<g transform="${transform}" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="15"/><path d="M5 6 H7 M11 6 H13 M5 10 H7 M11 10 H13"/><path d="M8 17 V 13 H 10 V 17"/></g>`;
     default:
       return '';
   }

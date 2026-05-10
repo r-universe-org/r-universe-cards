@@ -85,3 +85,12 @@ export function wrapText(text, maxWidth, fontSize, weight, maxLines) {
   return lines;
 }
 
+export function getUniverseData(login){
+  return Promise.all([
+    fetch(`https://${login}.r-universe.dev/api/summary`).then((r) => r.json()),
+    fetch(`https://${login}.r-universe.dev/api/topics?limit=5`).then((r) => r.json()),
+  ]).then(([summary, topics]) => {  
+    summary.topics = topics;
+    return summary;
+  });
+}

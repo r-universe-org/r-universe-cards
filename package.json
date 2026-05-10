@@ -1,7 +1,7 @@
 {
   "name": "r-universe-cards",
-  "version": "0.3.0",
-  "description": "Generate social media preview cards for R-universe",
+  "version": "0.4.0",
+  "description": "Generates social media preview cards for R-universe",
   "main": "src/index.js",
   "type": "module",
   "exports": {

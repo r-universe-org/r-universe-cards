@@ -19,12 +19,12 @@ fonts are required.
 
 ## Quick example
 
-This is an ES module — use `import` syntax. Call `generateSvg` if you
-want SVG, `generatePng` if you want PNG. Both return a Promise.
+This is an ES module — use `import` syntax. The package generators return
+SVG; pipe through `svgToPng()` for PNG.
 
 ```js
 import { writeFile } from 'node:fs/promises';
-import { generateSvg, generatePng } from 'r-universe-cards';
+import { generatePackageSvg, svgToPng } from 'r-universe-cards';
 
 const owner = 'r-spatial';
 const pkg = 'sf';
@@ -32,53 +32,44 @@ const url = `https://${owner}.r-universe.dev/api/packages/${pkg}`;
 
 fetch(url)
   .then((res) => res.json())
-  .then((data) => generatePng(data)
-  .then((png) => writeFile('sf.png', png)));
+  .then(generatePackageSvg)
+  .then((svg) => writeFile('sf.png', svgToPng(svg)));
 ```
 
 ## API
 
-### `generateSvg(pkgJson, options?)` → `Promise<string>`
+### `generatePackageSvg(pkgJson)` → `Promise<string>`
 
-Build the SVG card.
+Build the SVG card for a single package. `pkgJson` is the raw object
+returned by `/api/packages/{name}`. Returns the SVG document as a UTF-8
+string.
 
-- `pkgJson` — the raw object returned by `/api/packages/{name}`.
-- `options.fetchLogo` — `false` to skip downloading the package logo (and
-  avatar fallback). Default `true`.
-- `options.localLogoPath` — read a logo from disk instead of the network,
-  useful for offline rendering.
+### `generateUniverseSvg(login)` → `Promise<string>`
 
-Returns the SVG document as a UTF-8 string.
+Build the SVG card for an entire universe (org or user landing page).
+Internally fetches `/api/summary` and `/api/topics?limit=5` from
+`https://{login}.r-universe.dev`. Returns the SVG document as a UTF-8
+string.
 
-### `generatePng(pkgJson, options?)` → `Promise<Buffer>`
+### `svgToPng(svg)` → `Buffer`
 
-Same options as `generateSvg`, plus:
-
-- `options.scale` — pixel ratio for the PNG output. `1` (default) yields
-  1200×630; `2` yields 2400×1260 for retina displays.
-
-Returns a PNG `Buffer`. Internally produces the SVG first and then
-rasterises with `@resvg/resvg-js`.
-
-### `svgToPng(svg, options?)` → `Promise<Buffer>`
-
-Rasterise an existing SVG. Useful when you've already produced the SVG
-via `generateSvg()` and want both formats without running the layout
-twice.
+Rasterise an SVG card to PNG with `@resvg/resvg-js`. Synchronous —
+returns a `Buffer` directly. Output is always 1200×630.
 
 ### `extractCardData(pkgJson)` → `object`
+### `extractUniverseData({ login, summary, topics })` → `object`
 
-Pure transformation from raw r-universe JSON to the structured card data
-(package, title, owner, tags, maintainer, stats, etc.). Synchronous and
-side-effect free. Useful for logging or building your own renderer.
+Pure synchronous transformations from raw API JSON to the structured
+card data (package or universe, respectively). Useful for logging or
+building your own renderer.
 
-### `renderSvg(card, logo?)` → `string`
+### `renderPackageSvg(card, logo?)` → `string`
+### `renderUniverseSvg(uni, logo?)` → `string`
 
-Lower-level entry point. Takes a card object (output of
-`extractCardData`) and an optional logo descriptor, and returns the SVG
-synchronously. The package's high-level `generateSvg` calls this after
-fetching the logo; use it directly if you want full control over the
-logo source.
+Lower-level entry points. Take a card / universe object and an optional
+logo descriptor and return the SVG synchronously. The high-level
+`generate*` functions call these after fetching the logo; use them
+directly if you want full control over the logo source.
 
 ## What ends up on the card
 

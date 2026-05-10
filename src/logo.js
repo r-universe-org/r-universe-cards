@@ -14,7 +14,7 @@ import createError from 'http-errors';
  * Returns a Promise that resolves to the descriptor (or null on any failure
  * — bad URL, non-2xx response, timeout, unrecognised content type).
  */
-export function fetchLogo(url) {
+function fetchLogo(url) {
   return fetch(normalize_github_url(url)).then(function(res){
     if (!res.ok) {
       return res.json().catch(e => res.text()).then(function(data){
@@ -71,3 +71,34 @@ function normalize_github_url(url){
   );
 }
 
+export function resolveLogo(card) {
+  // Belt-and-braces guard against an infinite loop if `_pkglogo` ever
+  // points at the social card we're rendering.
+  if (card.logo && /r-universe\.dev\/.*\/card/.test(card.logo)) {
+    card.logo = null;
+  }
+
+  const packageLogo = card.logo ? fetchLogo(card.logo) : Promise.resolve(null);
+  return packageLogo.then((logo) => {
+    if (logo) return logo;
+    const avatarUrl = ownerAvatarUrl(card);
+    if (!avatarUrl) return null;
+    return fetchLogo(avatarUrl).then((avatar) => {
+      if (avatar) avatar.isUserAvatar = !card.ownerIsOrg;
+      return avatar;
+    });
+  });
+}
+
+function ownerAvatarUrl(card) {
+  if (card.ownerLogin === 'cran') {
+    return 'https://cran.r-project.org/CRANlogo.svg';
+  }
+  if (card.ownerUuid) {
+    return `https://avatars.githubusercontent.com/u/${card.ownerUuid}?size=460`;
+  }
+  if (!card.ownerLogin) return null;
+  const map = { 'bioc': 'Bioconductor', 'bioc-release': 'Bioconductor' };
+  const login = map[card.ownerLogin] || card.ownerLogin;
+  return `https://github.com/${encodeURIComponent(login)}.png?size=460`;
+}

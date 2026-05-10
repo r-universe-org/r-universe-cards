@@ -60,3 +60,49 @@ export function extractCardData(raw) {
   };
 }
 
+/**
+ * Pull the fields needed by the universe (per-org / per-user) card out of
+ * the two upstream APIs:
+ *
+ *   summary  — https://{login}.r-universe.dev/api/summary
+ *
+ * `summary` carries the universe's name, description, GitHub UUID and the
+ * type (user vs organization) directly, so we no longer hit api.github.com.
+ * `topics` is optional — a missing or empty array just means no tag row.
+ */
+export function extractUniverseData(summary) {
+  const ownerLogin = summary.universe || '';
+  if (!ownerLogin) {
+    throw new TypeError('extractUniverseData: a login is required');
+  }
+  // r-universe summaries for first-party orgs (rOpenSci, tidyverse, jeroen…)
+  // include `type`, `name`, `description`, `uuid`. Pseudo-universes such as
+  // `cran` and `bioc` ship a leaner summary without these — fall back to
+  // the login / org assumption in that case.
+  const isOrg = (summary.type || 'organization').toLowerCase() === 'organization';
+  const name = summary.name || ownerLogin;
+  const description = (summary.description || '').replace(/\s+/g, ' ').trim();
+  const ownerUuid = Number.isFinite(summary.uuid) ? summary.uuid : null;
+
+  const tags = [...new Set(
+    (Array.isArray(summary.topics) ? summary.topics : [])
+      .map((t) => String(t.topic || t).toLowerCase()),
+  )].filter((t) => t && t.length <= 24);
+
+  return {
+    // Shared with the package card's shape so resolveLogo / ownerAvatarUrl
+    // can treat both objects identically.
+    ownerLogin,
+    ownerIsOrg: isOrg,
+    name,
+    description,
+    ownerUuid,
+    tags,
+    packages: Number(summary.packages) || 0,
+    maintainers: Number(summary.maintainers) || 0,
+    organizations: Number(summary.organizations) || 0,
+    contributors: Number(summary.contributors) || 0,
+    articles: Number(summary.articles) || 0,
+    datasets: Number(summary.datasets) || 0,
+  };
+}
