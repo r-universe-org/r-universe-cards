@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { generatePackageSvg, generateUniverseSvg, svgToPng } from '../src/index.js';
 import { extractCardData } from '../src/extract.js'
-import { getUniverseData } from '../src/util.js'
 
 const outDir = path.join(import.meta.dirname, '..', 'output');
 fs.mkdirSync(outDir, { recursive: true });
@@ -69,12 +68,14 @@ function renderOne({ owner, pkg }) {
 
 function renderUniverse(login) {
   const t0 = Date.now();
-  return getUniverseData(login).then((data) => generateUniverseSvg(data)).then((svg) => {
-    const png = svgToPng(svg);
-    const ms = Date.now() - t0;
-    const file = `universe-${login}`;
-    fs.writeFileSync(path.join(outDir, `${file}.svg`), svg);
-    fs.writeFileSync(path.join(outDir, `${file}.png`), png);
-    console.log(`${file.padEnd(20)} ${ms}ms  (universe card)`);
-  });
+  return fetch(`https://${login}.r-universe.dev/api/summary`)
+    .then((r) => r.json())
+    .then((data) => generateUniverseSvg(data)).then((svg) => {
+      const png = svgToPng(svg);
+      const ms = Date.now() - t0;
+      const file = `universe-${login}`;
+      fs.writeFileSync(path.join(outDir, `${file}.svg`), svg);
+      fs.writeFileSync(path.join(outDir, `${file}.png`), png);
+      console.log(`${file.padEnd(20)} ${ms}ms  (universe card)`);
+    });
 }
