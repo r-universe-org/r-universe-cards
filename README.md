@@ -10,7 +10,7 @@ ready to drop into an `<meta property="og:image">` tag.
 ## Install
 
 ```sh
-npm install r-universe-cards
+npm install @r-universe/r-universe-cards
 ```
 
 This pulls in `@resvg/resvg-js` for PNG rasterisation. The package itself
@@ -24,7 +24,7 @@ SVG; pipe through `svgToPng()` for PNG.
 
 ```js
 import { writeFile } from 'node:fs/promises';
-import { generatePackageSvg, svgToPng } from 'r-universe-cards';
+import { generatePackageSvg, svgToPng } from '@r-universe/r-universe-cards';
 
 const owner = 'r-spatial';
 const pkg = 'sf';

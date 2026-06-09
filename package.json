@@ -1,6 +1,6 @@
 {
-  "name": "r-universe-cards",
-  "version": "0.5.0",
+  "name": "@r-universe/r-universe-cards",
+  "version": "0.6.0",
   "description": "Generates social media preview cards for R-universe",
   "main": "src/index.js",
   "type": "module",
@@ -39,5 +39,8 @@
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "http-errors": "^2.0.1"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
