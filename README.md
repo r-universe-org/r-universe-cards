@@ -56,6 +56,17 @@ string.
 Rasterise an SVG card to PNG with `@resvg/resvg-js`. Synchronous —
 returns a `Buffer` directly. Output is always 1200×630.
 
+### `svgToPngSubprocess(svg, label?)` → `Promise<Buffer>`
+
+Same as `svgToPng()` but renders in a persistent child process. Use this in
+servers: rendering does not block the event loop, and a resvg panic (which
+aborts the entire process, see
+[thx/resvg-js#423](https://github.com/thx/resvg-js/issues/423)) only kills
+the child, which is restarted for the next job. Jobs are rendered one at a
+time; the optional `label` is used in error messages and logs to identify
+the offending card. Rejects with an `http-errors` 500 error if rendering fails,
+crashes or takes longer than 20s, and with 503 if more than 50 jobs are queued.
+
 ### `extractCardData(pkgJson)` → `object`
 ### `extractUniverseData({ login, summary, topics })` → `object`
 
