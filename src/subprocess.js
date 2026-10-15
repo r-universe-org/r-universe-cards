@@ -1,10 +1,11 @@
 import { fork } from 'node:child_process';
 import createError from 'http-errors';
 
-// Same as svgToPng() but renders in a persistent child process. A resvg panic
-// aborts the entire process (https://github.com/thx/resvg-js/issues/423), and
-// rendering blocks the event loop, which is bad for servers. With this, only
-// the child dies and gets restarted for the next job. Jobs are sent one at a
+// Same as svgToPng() but renders in a persistent child process. Rendering
+// blocks the event loop, which is bad for servers, and a native crash would
+// abort the entire process (resvg panics used to, until resvg-js 2.7, see
+// https://github.com/thx/resvg-js/issues/423). With this, only the child dies
+// and gets restarted for the next job. Jobs are sent one at a
 // time so a crash or timeout can be attributed to the right svg.
 const workerPath = new URL('./worker.js', import.meta.url);
 const renderTimeout = 20000;

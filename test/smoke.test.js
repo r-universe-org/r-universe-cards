@@ -79,8 +79,8 @@ function assertPng1200x630(png) {
   assert.equal(png.readUInt32BE(20), 630);
 }
 
-// Element with a filter entirely outside the canvas makes resvg panic and abort
-// the process: https://github.com/thx/resvg-js/issues/423
+// Element with a filter entirely outside the canvas makes resvg panic. Before
+// resvg-js 2.7 this aborted the process: https://github.com/thx/resvg-js/issues/423
 const panicSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">' +
   '<filter id="f"><feGaussianBlur stdDeviation="5"/></filter>' +
   '<rect x="5000" y="5000" width="10" height="10" filter="url(#f)"/></svg>';
@@ -93,13 +93,17 @@ test('svgToPngSubprocess renders the same png as svgToPng', () =>
     assert.ok(png.equals(svgToPng(okSvg)));
   }));
 
+test('svgToPng throws on a resvg panic', () => {
+  assert.throws(() => svgToPng(panicSvg), /resvg panic/);
+});
+
 test('svgToPngSubprocess survives a resvg panic', () =>
   Promise.all([
     svgToPngSubprocess(panicSvg, 'panic test').then(
       () => assert.fail('expected a rejection'),
       (err) => {
         assert.equal(err.status, 500);
-        assert.match(err.message, /crashed while rendering panic test/);
+        assert.match(err.message, /Failed to render panic test: .*resvg panic/);
       }),
     svgToPngSubprocess(okSvg).then((png) => assert.ok(png.equals(svgToPng(okSvg)))),
   ]));
