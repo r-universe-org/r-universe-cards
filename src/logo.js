@@ -17,8 +17,11 @@ import createError from 'http-errors';
 function fetchLogo(url) {
   return fetch(normalize_github_url(url)).then(function(res){
     if (!res.ok) {
-      return res.json().catch(e => res.text()).then(function(data){
-        throw createError(res.status, `GitHub API returned HTTP ${res.status}: ${data.message || data}`);
+      // The body can only be read once, so read it as text and then try json
+      return res.text().then(function(text){
+        let message = text;
+        try { message = JSON.parse(text).message || text; } catch (e) {}
+        throw createError(res.status, `GitHub API returned HTTP ${res.status}: ${message}`);
       });
     }
     const contentType = res.headers.get('content-type') || '';
@@ -78,15 +81,23 @@ export function resolveLogo(card) {
     card.logo = null;
   }
 
-  const packageLogo = card.logo ? fetchLogo(card.logo) : Promise.resolve(null);
+  const packageLogo = card.logo ? tryFetchLogo(card.logo) : Promise.resolve(null);
   return packageLogo.then((logo) => {
     if (logo) return logo;
     const avatarUrl = ownerAvatarUrl(card);
     if (!avatarUrl) return null;
-    return fetchLogo(avatarUrl).then((avatar) => {
+    return tryFetchLogo(avatarUrl).then((avatar) => {
       if (avatar) avatar.isUserAvatar = !card.ownerIsOrg;
       return avatar;
     });
+  });
+}
+
+// A broken logo should not break the card: fall back to the avatar, or no logo.
+function tryFetchLogo(url) {
+  return Promise.resolve().then(() => fetchLogo(url)).catch((err) => {
+    console.log(`[CARD RENDERER] failed to fetch logo ${url}: ${err.message}`);
+    return null;
   });
 }
 

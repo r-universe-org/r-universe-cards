@@ -11,7 +11,7 @@ export function extractCardData(raw) {
   const pkg = raw.Package || raw._nocasepkg || '';
   const title = (raw.Title || '').replace(/\s+/g, ' ').trim();
   const version = raw.Version || '';
-  const logo = raw._pkglogo || null;
+  const logo = logoUrl(raw._pkglogo, raw._upstream);
   const userBio = raw._userbio || {};
   const ownerLogin = raw._user || '';
   const ownerIsOrg = userBio.type === 'organization';
@@ -103,4 +103,15 @@ export function extractUniverseData(summary) {
     articles: Number(summary.articles) || 0,
     datasets: Number(summary.datasets) || 0,
   };
+}
+
+// _pkglogo is usually a url, but can also be a path in the repository, e.g.
+// 'man/figures/logo.png'. Resolve those for GitHub repositories.
+function logoUrl(logo, upstream) {
+  if (!logo) return null;
+  if (/^https?:\/\//i.test(logo)) return logo;
+  if (typeof upstream === 'string' && /^https:\/\/github\.com\/[^/]+\/[^/]+/.test(upstream)) {
+    return `${upstream.replace(/\/$/, '')}/raw/HEAD/${logo.replace(/^\.?\//, '')}`;
+  }
+  return null;
 }

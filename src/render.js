@@ -488,10 +488,11 @@ function inlineSvgScaled(svgText, w, h) {
     // Strip any attribute we want to set ourselves; otherwise the source
     // SVG's value plus our value would collide and resvg refuses to parse
     // (cran's CRANlogo.svg, for example, ships its own preserveAspectRatio).
+    // Attributes can be single quoted, e.g. in SVGs from R's svglite.
     let cleaned = attrs
-      .replace(/\swidth="[^"]*"/gi, '')
-      .replace(/\sheight="[^"]*"/gi, '')
-      .replace(/\spreserveAspectRatio="[^"]*"/gi, '');
+      .replace(/\swidth=("[^"]*"|'[^']*')/gi, '')
+      .replace(/\sheight=("[^"]*"|'[^']*')/gi, '')
+      .replace(/\spreserveAspectRatio=("[^"]*"|'[^']*')/gi, '');
     return `<svg${cleaned} width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet">`;
   });
   return s;
@@ -506,9 +507,9 @@ function inlineSvgScaled(svgText, w, h) {
 function namespaceIds(svgText) {
   const prefix = `i${++inlineCounter}-`;
   return svgText
-    .replace(/\bid="([^"]+)"/g, (m, id) => `id="${prefix}${id}"`)
+    .replace(/\bid=(["'])([^"']+)\1/g, (m, q, id) => `id=${q}${prefix}${id}${q}`)
     .replace(/url\(#([^)]+)\)/g, (m, id) => `url(#${prefix}${id})`)
-    .replace(/(xlink:)?href="#([^"]+)"/g, (m, xl, id) => `${xl || ''}href="#${prefix}${id}"`);
+    .replace(/(xlink:)?href=(["'])#([^"']+)\2/g, (m, xl, q, id) => `${xl || ''}href=${q}#${prefix}${id}${q}`);
 }
 
 /* ------------------------------ space scenery ------------------------------ */
