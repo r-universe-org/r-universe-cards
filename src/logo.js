@@ -15,7 +15,8 @@ import createError from 'http-errors';
  * — bad URL, non-2xx response, timeout, unrecognised content type).
  */
 function fetchLogo(url) {
-  return fetch(normalize_github_url(url)).then(function(res){
+  // A slow logo host should not hold up the card: render without the logo instead
+  return fetch(normalize_github_url(url), {signal: AbortSignal.timeout(3000)}).then(function(res){
     if (!res.ok) {
       // The body can only be read once, so read it as text and then try json
       return res.text().then(function(text){
@@ -103,7 +104,7 @@ function tryFetchLogo(url) {
 
 function ownerAvatarUrl(card) {
   if (card.ownerLogin === 'cran') {
-    return 'https://cran.r-project.org/CRANlogo.svg';
+    return 'https://cloud.r-project.org/CRANlogo.svg';
   }
   if (card.ownerUuid) {
     return `https://avatars.githubusercontent.com/u/${card.ownerUuid}?size=460`;
